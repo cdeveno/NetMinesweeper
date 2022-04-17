@@ -18,7 +18,7 @@ public class Mouse implements EventHandler<MouseEvent> {
 
     @Override
     public void handle(MouseEvent mouseEvent) {
-        if (game.client.clientState == Client.ClientState.IN_PROGRESS) {
+        if (game.client.getClientState() == Client.ClientState.IN_PROGRESS) {
             Tile tile = board.getTile(mouseEvent.getX(), mouseEvent.getY());
             if (firstClick) {
                 board.clearArea(tile);

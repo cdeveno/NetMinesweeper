@@ -9,7 +9,8 @@ public class GamePane extends BorderPane {
 
     protected final Client client;
     public static final double WIDTH = 700, HEIGHT = 700;
-    protected final Canvas canvas = new Canvas(GamePane.WIDTH, GamePane.HEIGHT);
+    protected final Canvas canvas = new Canvas(WIDTH, HEIGHT);
+    public final PlayerTable playerTable = new PlayerTable();
     public final Board board;
 
     private final Thread socketThread;
@@ -17,16 +18,25 @@ public class GamePane extends BorderPane {
 
     public GamePane(Client client) {
         this.client = client;
-        socketThread = new Thread(client);
+        this.client.setGame(this);
+        socketThread = new Thread(this.client);
         socketThread.setDaemon(true);
         socketThread.start();
-        while (client.board == null) System.out.println("Waiting for board...");
-        board = new Board(client.board);
+        while (true) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (this.client.board != null) break;
+        }
+        board = new Board(this.client.board);
         board.renderBoard(canvas);
         canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, mouse);
         canvas.setFocusTraversable(true);
         setCenter(canvas);
-        client.setClientState(Client.ClientState.STANDBY);
+        setRight(playerTable);
+        this.client.setClientState(Client.ClientState.STANDBY);
     }
 
     public void lostGame() {

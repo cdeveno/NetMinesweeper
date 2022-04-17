@@ -19,12 +19,13 @@ public class GameServer {
     private static final Board board = new Board(GamePane.WIDTH, GamePane.HEIGHT);
     private static final int SERVER_PORT = 59001;
     private static final Map<String, Client.ClientState> clientNames = new HashMap<>();
+    private static final Map<String, Double> clientTimes = new HashMap<>();
     private static final Set<ObjectOutputStream> outputStreams = new HashSet<>();
 
     public static final String NAME_REQUEST = "SUBMIT-NAME";
     public static final String NAME_ACCEPT = "NAME-ACCEPTED ";
-    public static final String DISCONNECT_REQUEST = "DISCONNECT-CLIENT";
     public static final String CLIENT_STATE_UPDATE = "STATE-UPDATE";
+    public static final String DISCONNECT_REQUEST = "DISCONNECT-CLIENT";
 
     public static void main(String[] args) throws IOException {
         board.initBoard();
@@ -65,6 +66,7 @@ public class GameServer {
                     synchronized (clientNames) {
                         if (!clientNames.containsKey(name)) {
                             clientNames.put(name, Client.ClientState.CONNECTING);
+                            broadcastStatusUpdate(name, Client.ClientState.CONNECTING);
                             break;
                         }
                     }
@@ -76,11 +78,22 @@ public class GameServer {
                 outputStream.flush();
 
 
-                while (true) {
-                    switch (inputStream.readUTF()) {
-                        case CLIENT_STATE_UPDATE -> {
+                synchronized (clientNames) {
+                    for (String name : clientNames.keySet()) {
+                        if (this.name.equals(name)) continue;
+                        outputStream.writeUTF(CLIENT_STATE_UPDATE + ":" + name + ":" + clientNames.get(name));
+                        outputStream.flush();
+                    }
+                }
 
+                while (!socket.isClosed()) {
+                    String input = inputStream.readUTF();
+                    if (input.startsWith(CLIENT_STATE_UPDATE)) {
+                        Client.ClientState state = Client.ClientState.valueOf(input.substring(input.indexOf(':') + 1));
+                        synchronized (clientNames) {
+                            clientNames.put(name, state);
                         }
+                        broadcastStatusUpdate(name, state);
                     }
                 }
             } catch (IOException e) {
@@ -95,6 +108,15 @@ public class GameServer {
                 try {
                     socket.close();
                 } catch (IOException e) {
+                }
+            }
+        }
+
+        private void broadcastStatusUpdate(String name, Client.ClientState state) throws IOException {
+            synchronized (outputStreams) {
+                for (ObjectOutputStream o : outputStreams) {
+                    o.writeUTF(CLIENT_STATE_UPDATE + ":" + name + ":" + state.name());
+                    o.flush();
                 }
             }
         }
