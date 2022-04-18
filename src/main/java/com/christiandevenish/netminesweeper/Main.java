@@ -11,7 +11,7 @@ import java.io.IOException;
 
 public class Main extends Application {
 
-    private static Stage stage;
+    public static Stage stage;
     private static GamePane game;
 
     @Override

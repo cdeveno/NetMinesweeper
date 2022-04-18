@@ -1,13 +1,18 @@
 package com.christiandevenish.netminesweeper.game;
 
+import com.christiandevenish.netminesweeper.Main;
 import com.christiandevenish.netminesweeper.server.Client;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 
+import java.io.IOException;
+import java.util.Objects;
+
 public class GamePane extends BorderPane {
 
-    protected final Client client;
+    public final Client client;
     public static final double WIDTH = 700, HEIGHT = 700;
     protected final Canvas canvas = new Canvas(WIDTH, HEIGHT);
     public final PlayerTable playerTable = new PlayerTable();
@@ -22,20 +27,26 @@ public class GamePane extends BorderPane {
         socketThread = new Thread(this.client);
         socketThread.setDaemon(true);
         socketThread.start();
-        while (true) {
+        do {
             try {
-                Thread.sleep(100);
+                Thread.sleep(10);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            if (this.client.board != null) break;
-        }
+        } while (this.client.board == null);
         board = new Board(this.client.board);
         board.renderBoard(canvas);
         canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, mouse);
         canvas.setFocusTraversable(true);
         setCenter(canvas);
         setRight(playerTable);
+        if (client.isAdmin) {
+            try {
+                setBottom(FXMLLoader.load(Objects.requireNonNull(Main.class.getResource("admin_menu.fxml"))));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         this.client.setClientState(Client.ClientState.STANDBY);
     }
 

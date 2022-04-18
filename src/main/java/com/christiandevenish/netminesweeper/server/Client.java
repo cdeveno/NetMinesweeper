@@ -13,7 +13,7 @@ public class Client extends Task<Void> {
 
     private final String name, ipAddress;
     private final int port;
-    private boolean isAdmin;
+    public boolean isAdmin = false;
 
     private Socket socket;
     private ObjectOutputStream outputStream;
@@ -46,7 +46,9 @@ public class Client extends Task<Void> {
                 }
             }
             while (true) {
-                if (inputStream.readUTF().startsWith(GameServer.NAME_ACCEPT)) {
+                String input = inputStream.readUTF();
+                if (input.startsWith(GameServer.NAME_ACCEPT)) {
+                    if (input.contains(GameServer.ADMIN_ANNOTATION)) isAdmin = true;
                     board = (Board) inputStream.readObject();
                     break;
                 }

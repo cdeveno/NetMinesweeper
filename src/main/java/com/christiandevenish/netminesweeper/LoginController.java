@@ -44,7 +44,7 @@ public class LoginController {
         Alert errorAlert = new Alert(Alert.AlertType.ERROR);
         errorAlert.setHeaderText("Invalid " + type + " input");
         switch (type) {
-            case "name" -> errorAlert.setContentText("Name must be between 2 and 10 characters.");
+            case "name" -> errorAlert.setContentText("Name must be between 2 and 25 characters.");
             case "IP address" -> errorAlert.setContentText("Input must be a valid IP address.");
             case "port" -> errorAlert.setContentText("Port must be a valid number.");
         }

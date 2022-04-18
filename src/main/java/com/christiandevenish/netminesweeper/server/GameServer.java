@@ -2,6 +2,7 @@ package com.christiandevenish.netminesweeper.server;
 
 import com.christiandevenish.netminesweeper.game.Board;
 import com.christiandevenish.netminesweeper.game.GamePane;
+import javafx.fxml.FXML;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -16,7 +17,9 @@ import java.util.concurrent.Executors;
 
 public class GameServer {
 
+    private static ServerState serverState = ServerState.LOBBY;
     private static final Board board = new Board(GamePane.WIDTH, GamePane.HEIGHT);
+    private static final int MAX_PLAYERS = 25;
     private static final int SERVER_PORT = 59001;
     private static final Map<String, Client.ClientState> clientNames = new HashMap<>();
     private static final Map<String, Double> clientTimes = new HashMap<>();
@@ -24,6 +27,7 @@ public class GameServer {
 
     public static final String NAME_REQUEST = "SUBMIT-NAME";
     public static final String NAME_ACCEPT = "NAME-ACCEPTED ";
+    public static final String ADMIN_ANNOTATION = "-isAdmin";
     public static final String CLIENT_STATE_UPDATE = "STATE-UPDATE";
     public static final String DISCONNECT_REQUEST = "DISCONNECT-CLIENT";
 
@@ -32,7 +36,7 @@ public class GameServer {
 
         System.out.println("Server running...");
 
-        var pool = Executors.newFixedThreadPool(10);
+        var pool = Executors.newFixedThreadPool(MAX_PLAYERS);
 
         try (ServerSocket listener = new ServerSocket(SERVER_PORT)) {
             while (true) {
@@ -73,7 +77,7 @@ public class GameServer {
                 }
 
                 outputStreams.add(outputStream);
-                outputStream.writeUTF(NAME_ACCEPT);
+                outputStream.writeUTF(NAME_ACCEPT + ADMIN_ANNOTATION);
                 outputStream.writeObject(new Board(board));
                 outputStream.flush();
 
@@ -108,6 +112,7 @@ public class GameServer {
                 try {
                     socket.close();
                 } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
@@ -122,5 +127,25 @@ public class GameServer {
         }
     }
 
+    public static class AdminController {
 
+        @FXML
+        public void startGame() {
+
+        }
+
+        @FXML
+        public void kickPlayer() {
+        }
+
+        @FXML
+        public void restartGame() {
+        }
+    }
+
+    enum ServerState {
+        LOBBY,
+        IN_PROGRESS,
+        FINISHED
+    }
 }
