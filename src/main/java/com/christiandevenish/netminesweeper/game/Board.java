@@ -22,16 +22,6 @@ public class Board implements Serializable {
         tileHeight = height / numTiles;
     }
 
-    public Board(Board board) {
-        this(board.width, board.height);
-        for (int i = 0; i < numTiles; i++) {
-            for (int j = 0; j < numTiles; j++) {
-                Tile tile = board.board[i][j];
-                this.board[i][j] = new Tile(tile.x, tile.y, tile.width, tile.height, tile.row, tile.column, tile.isMine);
-            }
-        }
-    }
-
     public void initBoard() {
         Random r = new Random();
 
@@ -261,6 +251,4 @@ public class Board implements Serializable {
             }
         }
     }
-
-
 }

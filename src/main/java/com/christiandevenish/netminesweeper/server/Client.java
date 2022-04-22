@@ -3,6 +3,7 @@ package com.christiandevenish.netminesweeper.server;
 import com.christiandevenish.netminesweeper.game.Board;
 import com.christiandevenish.netminesweeper.game.GamePane;
 import javafx.concurrent.Task;
+import javafx.fxml.FXML;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -16,12 +17,12 @@ public class Client extends Task<Void> {
     public boolean isAdmin = false;
 
     private Socket socket;
-    private ObjectOutputStream outputStream;
+    private static ObjectOutputStream outputStream;
     private ObjectInputStream inputStream;
     public Board board = null;
     private GamePane game;
 
-    private ClientState clientState;
+    private ClientState clientState; // SHOULD ONLY BE CHANGED FROM SETTER!
 
     public Client(String name, String ipAddress, int port) {
         this.name = name;
@@ -50,6 +51,9 @@ public class Client extends Task<Void> {
                 if (input.startsWith(GameServer.NAME_ACCEPT)) {
                     if (input.contains(GameServer.ADMIN_ANNOTATION)) isAdmin = true;
                     board = (Board) inputStream.readObject();
+                    synchronized (game) {
+                        game.notifyAll();
+                    }
                     break;
                 }
             }
@@ -61,6 +65,8 @@ public class Client extends Task<Void> {
                     ClientState status = ClientState.valueOf(input.substring(input.lastIndexOf(':') + 1));
                     game.playerTable.add(name, status);
                     System.out.println("Adding " + name + " with status " + status.name());
+                } else if (input.startsWith(GameServer.GAME_START)) {
+                    setClientState(ClientState.IN_PROGRESS);
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -89,6 +95,28 @@ public class Client extends Task<Void> {
         WON,
         LOST,
         IN_PROGRESS
+    }
+
+    public static class AdminController {
+
+        @FXML
+        public void startGame() {
+            System.out.println("GAME STARTED");
+            try {
+                outputStream.writeUTF(GameServer.GAME_START);
+                outputStream.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @FXML
+        public void kickPlayer() {
+        }
+
+        @FXML
+        public void restartGame() {
+        }
     }
 
     public void setGame(GamePane game) {

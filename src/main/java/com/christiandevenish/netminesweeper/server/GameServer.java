@@ -2,7 +2,6 @@ package com.christiandevenish.netminesweeper.server;
 
 import com.christiandevenish.netminesweeper.game.Board;
 import com.christiandevenish.netminesweeper.game.GamePane;
-import javafx.fxml.FXML;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -30,6 +29,7 @@ public class GameServer {
     public static final String ADMIN_ANNOTATION = "-isAdmin";
     public static final String CLIENT_STATE_UPDATE = "STATE-UPDATE";
     public static final String DISCONNECT_REQUEST = "DISCONNECT-CLIENT";
+    public static final String GAME_START = "GAME_START";
 
     public static void main(String[] args) throws IOException {
         board.initBoard();
@@ -77,8 +77,11 @@ public class GameServer {
                 }
 
                 outputStreams.add(outputStream);
-                outputStream.writeUTF(NAME_ACCEPT + ADMIN_ANNOTATION);
-                outputStream.writeObject(new Board(board));
+                synchronized (clientNames) {
+                    if (clientNames.size() == 1) outputStream.writeUTF(NAME_ACCEPT + ADMIN_ANNOTATION);
+                    else outputStream.writeUTF(NAME_ACCEPT);
+                }
+                outputStream.writeObject(board);
                 outputStream.flush();
 
 
@@ -98,6 +101,8 @@ public class GameServer {
                             clientNames.put(name, state);
                         }
                         broadcastStatusUpdate(name, state);
+                    } else if (input.startsWith(GAME_START)) {
+                        broadcastMessage(GAME_START);
                     }
                 }
             } catch (IOException e) {
@@ -116,30 +121,23 @@ public class GameServer {
                 }
             }
         }
+    }
 
-        private void broadcastStatusUpdate(String name, Client.ClientState state) throws IOException {
-            synchronized (outputStreams) {
-                for (ObjectOutputStream o : outputStreams) {
-                    o.writeUTF(CLIENT_STATE_UPDATE + ":" + name + ":" + state.name());
-                    o.flush();
-                }
+    private static void broadcastStatusUpdate(String name, Client.ClientState state) throws IOException {
+        synchronized (outputStreams) {
+            for (ObjectOutputStream o : outputStreams) {
+                o.writeUTF(CLIENT_STATE_UPDATE + ":" + name + ":" + state.name());
+                o.flush();
             }
         }
     }
 
-    public static class AdminController {
-
-        @FXML
-        public void startGame() {
-
-        }
-
-        @FXML
-        public void kickPlayer() {
-        }
-
-        @FXML
-        public void restartGame() {
+    private static void broadcastMessage(String message) throws IOException {
+        synchronized (outputStreams) {
+            for (ObjectOutputStream o : outputStreams) {
+                o.writeUTF(message);
+                o.flush();
+            }
         }
     }
 

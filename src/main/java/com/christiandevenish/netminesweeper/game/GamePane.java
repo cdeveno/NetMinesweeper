@@ -27,14 +27,14 @@ public class GamePane extends BorderPane {
         socketThread = new Thread(this.client);
         socketThread.setDaemon(true);
         socketThread.start();
-        do {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        try {
+            synchronized (this) {
+                this.wait();
             }
-        } while (this.client.board == null);
-        board = new Board(this.client.board);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        board = this.client.board;
         board.renderBoard(canvas);
         canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, mouse);
         canvas.setFocusTraversable(true);
