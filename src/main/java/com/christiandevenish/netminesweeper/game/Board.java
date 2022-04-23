@@ -13,7 +13,7 @@ public class Board implements Serializable {
     private final double tileHeight;
 
     private final Tile[][] board = new Tile[numTiles][numTiles];
-    private final float mineDensity = 0.15f;
+    private final float mineDensity = 0.1f;
 
     public Board(double width, double height) {
         this.width = width;

@@ -1,8 +1,6 @@
 package com.christiandevenish.netminesweeper.game;
 
 import com.christiandevenish.netminesweeper.server.Client;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -20,8 +18,8 @@ public class PlayerTable extends TableView<PlayerTable.Player> {
         TableColumn<Player, String> nameCol = new TableColumn<>("Name");
         nameCol.setCellValueFactory(data -> data.getValue().nameProperty());
 
-        TableColumn<Player, Double> timeCol = new TableColumn<>("Time");
-        timeCol.setCellValueFactory(data -> data.getValue().timeProperty().asObject());
+        TableColumn<Player, String> timeCol = new TableColumn<>("Time");
+        timeCol.setCellValueFactory(data -> data.getValue().timeProperty());
 
         TableColumn<Player, String> statusCol = new TableColumn<>("Status");
         statusCol.setCellValueFactory(data -> data.getValue().statusProperty());
@@ -30,14 +28,14 @@ public class PlayerTable extends TableView<PlayerTable.Player> {
         getColumns().addAll(nameCol, timeCol, statusCol);
     }
 
-    class Player {
+    static class Player {
         private final StringProperty name;
-        private DoubleProperty time;
+        private StringProperty time;
         private StringProperty status;
 
          public Player(String name, double time, String status) {
              this.name = new SimpleStringProperty(name);
-             this.time = new SimpleDoubleProperty(time);
+             this.time = new SimpleStringProperty(String.format("%.2f", time));
              this.status = new SimpleStringProperty(status);
          }
 
@@ -53,15 +51,15 @@ public class PlayerTable extends TableView<PlayerTable.Player> {
             this.name.set(name);
         }
 
-        public double getTime() {
+        public String getTime() {
             return time.get();
         }
 
-        public DoubleProperty timeProperty() {
+        public StringProperty timeProperty() {
             return time;
         }
 
-        public void setTime(double time) {
+        public void setTime(String time) {
             this.time.set(time);
         }
 
@@ -88,5 +86,15 @@ public class PlayerTable extends TableView<PlayerTable.Player> {
         }
         data.add(new Player(name, 0.0, status.name()));
         refresh();
+    }
+
+    public void editTime(String name, double time) {
+        for (Player player : data) {
+            if (player.getName().equals(name)) {
+                player.setTime(String.format("%.2f", time));
+                refresh();
+                break;
+            }
+        }
     }
 }

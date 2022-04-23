@@ -30,11 +30,10 @@ public class GameServer {
     public static final String CLIENT_STATE_UPDATE = "STATE-UPDATE";
     public static final String DISCONNECT_REQUEST = "DISCONNECT-CLIENT";
     public static final String GAME_START = "GAME_START";
+    public static final String CLIENT_TIME_UPDATE = "TIME_UPDATE";
 
     public static void main(String[] args) throws IOException {
         board.initBoard();
-
-        System.out.println("Server running...");
 
         var pool = Executors.newFixedThreadPool(MAX_PLAYERS);
 
@@ -93,6 +92,15 @@ public class GameServer {
                     }
                 }
 
+                synchronized (clientTimes) {
+                    for (String name : clientTimes.keySet()) {
+                        if (this.name.equals(name)) continue;
+                        outputStream.writeUTF(CLIENT_TIME_UPDATE + ":" + name);
+                        outputStream.writeDouble(clientTimes.get(name));
+                        outputStream.flush();
+                    }
+                }
+
                 while (!socket.isClosed()) {
                     String input = inputStream.readUTF();
                     if (input.startsWith(CLIENT_STATE_UPDATE)) {
@@ -102,11 +110,16 @@ public class GameServer {
                         }
                         broadcastStatusUpdate(name, state);
                     } else if (input.startsWith(GAME_START)) {
+                        serverState = ServerState.IN_PROGRESS;
                         broadcastMessage(GAME_START);
+                    } else if (input.startsWith(CLIENT_TIME_UPDATE)) {
+                        double time = inputStream.readDouble();
+                        clientTimes.put(name, time);
+                        broadcastTimeUpdate(name, time);
                     }
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println(e.getMessage());
             } finally {
                 if (outputStream != null) {
                     outputStreams.remove(outputStream);
@@ -117,7 +130,7 @@ public class GameServer {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.err.println(e.getMessage());
                 }
             }
         }
@@ -127,6 +140,16 @@ public class GameServer {
         synchronized (outputStreams) {
             for (ObjectOutputStream o : outputStreams) {
                 o.writeUTF(CLIENT_STATE_UPDATE + ":" + name + ":" + state.name());
+                o.flush();
+            }
+        }
+    }
+
+    private static void broadcastTimeUpdate(String name, double time) throws IOException {
+        synchronized (outputStreams) {
+            for (ObjectOutputStream o : outputStreams) {
+                o.writeUTF(CLIENT_TIME_UPDATE + ":" + name);
+                o.writeDouble(time);
                 o.flush();
             }
         }

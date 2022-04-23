@@ -64,9 +64,13 @@ public class Client extends Task<Void> {
                     String name = input.substring(input.indexOf(':') + 1, input.lastIndexOf(':'));
                     ClientState status = ClientState.valueOf(input.substring(input.lastIndexOf(':') + 1));
                     game.playerTable.add(name, status);
-                    System.out.println("Adding " + name + " with status " + status.name());
+                } else if (input.startsWith(GameServer.CLIENT_TIME_UPDATE)) {
+                    String name = input.substring(input.indexOf(':') + 1);
+                    double time = inputStream.readDouble();
+                    game.playerTable.editTime(name, time);
                 } else if (input.startsWith(GameServer.GAME_START)) {
                     setClientState(ClientState.IN_PROGRESS);
+                    game.startGame();
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -89,6 +93,16 @@ public class Client extends Task<Void> {
         }
     }
 
+    public void sendTime(double time) {
+        try {
+            outputStream.writeUTF(GameServer.CLIENT_TIME_UPDATE);
+            outputStream.writeDouble(time);
+            outputStream.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public enum ClientState {
         CONNECTING,
         STANDBY,
@@ -101,7 +115,6 @@ public class Client extends Task<Void> {
 
         @FXML
         public void startGame() {
-            System.out.println("GAME STARTED");
             try {
                 outputStream.writeUTF(GameServer.GAME_START);
                 outputStream.flush();
