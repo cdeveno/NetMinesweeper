@@ -2,9 +2,8 @@ package com.christiandevenish.netminesweeper.game;
 
 import com.christiandevenish.netminesweeper.server.Client;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.concurrent.Task;
 
-public class Timer extends Task<Double> {
+public class Timer implements Runnable {
     public SimpleDoubleProperty timeElapsed  = new SimpleDoubleProperty(0.0);
     private final Client client;
 
@@ -14,7 +13,7 @@ public class Timer extends Task<Double> {
 
 
     @Override
-    protected Double call() {
+    public void run() {
         long initTime = System.nanoTime();
 
         while (client.getClientState().equals(Client.ClientState.IN_PROGRESS)) {
@@ -24,8 +23,6 @@ public class Timer extends Task<Double> {
                 setTimeElapsed(delta);
             }
         }
-
-        return getTimeElapsed();
     }
 
     public double getTimeElapsed() {

@@ -12,7 +12,6 @@ import java.io.IOException;
 public class Main extends Application {
 
     public static Stage stage;
-    private static GamePane game;
 
     @Override
     public void start(Stage stage) throws IOException {
@@ -27,13 +26,14 @@ public class Main extends Application {
         stage.show();
     }
 
-    public static void main(String[] args) {
+    public static void run() {
         launch();
     }
 
     public static void displayGame(Client client) {
-        game = new GamePane(client);
+        GamePane game = new GamePane(client);
         stage.setTitle("NetMinesweeper");
         stage.setScene(new Scene(game));
+        stage.setOnCloseRequest(windowEvent -> client.disconnect(client.getName()));
     }
 }

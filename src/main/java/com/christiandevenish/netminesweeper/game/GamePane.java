@@ -1,6 +1,7 @@
 package com.christiandevenish.netminesweeper.game;
 
 import com.christiandevenish.netminesweeper.Main;
+import com.christiandevenish.netminesweeper.server.AdminController;
 import com.christiandevenish.netminesweeper.server.Client;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
@@ -20,15 +21,14 @@ public class GamePane extends BorderPane {
     public static final double WIDTH = 700, HEIGHT = 700;
     protected final Canvas canvas = new Canvas(WIDTH, HEIGHT);
     public final PlayerTable playerTable = new PlayerTable();
-    public final Board board;
-    private final Thread socketThread;
-    private final Mouse mouse = new Mouse(this);
+    protected Board board;
+    private final Mouse mouse;
     private final Timer timer;
-    private final Thread timerThread;
+    private Thread timerThread;
     public GamePane(Client client) {
         this.client = client;
         this.client.setGame(this);
-        socketThread = new Thread(this.client);
+        Thread socketThread = new Thread(this.client);
         socketThread.setDaemon(true);
         socketThread.start();
         try {
@@ -40,6 +40,7 @@ public class GamePane extends BorderPane {
         }
         board = this.client.board;
         board.renderBoard(canvas);
+        mouse = new Mouse(this);
         canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, mouse);
         canvas.setFocusTraversable(true);
         setCenter(canvas);
@@ -58,6 +59,7 @@ public class GamePane extends BorderPane {
 
         if (client.isAdmin) {
             try {
+                AdminController.client = this.client;
                 setBottom(FXMLLoader.load(Objects.requireNonNull(Main.class.getResource("admin_menu.fxml"))));
             } catch (IOException e) {
                 e.printStackTrace();
@@ -78,6 +80,16 @@ public class GamePane extends BorderPane {
     }
 
     public void startGame() {
+        mouse.firstClick = true;
+        timerThread = new Thread(timer);
+        timerThread.setDaemon(true);
+        timerThread.setPriority(Thread.MIN_PRIORITY);
         timerThread.start();
+    }
+
+    public void setBoard(Board board) {
+        this.board = board;
+        this.board.renderBoard(canvas);
+        timer.setTimeElapsed(0.0);
     }
 }
