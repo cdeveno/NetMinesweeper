@@ -8,11 +8,16 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 public class PlayerTable extends TableView<PlayerTable.Player> {
 
     final ObservableList<Player> data = FXCollections.observableArrayList();
 
     public PlayerTable() {
+        setEditable(true);
         setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         TableColumn<Player, String> nameCol = new TableColumn<>("Name");
@@ -28,7 +33,7 @@ public class PlayerTable extends TableView<PlayerTable.Player> {
         getColumns().addAll(nameCol, timeCol, statusCol);
     }
 
-    static class Player {
+    public static class Player {
         private final StringProperty name;
         private StringProperty time;
         private StringProperty status;
@@ -85,16 +90,49 @@ public class PlayerTable extends TableView<PlayerTable.Player> {
             }
         }
         data.add(new Player(name, 0.0, status.name()));
-        refresh();
     }
 
     public void editTime(String name, double time) {
         for (Player player : data) {
             if (player.getName().equals(name)) {
                 player.setTime(String.format("%.2f", time));
-                refresh();
                 break;
             }
         }
+    }
+
+    public void clearTimes() {
+        for (Player player : data) {
+            player.setTime(Double.toString(0.0));
+        }
+    }
+
+    public void remove(String name) {
+        Iterator<Player> iterator = data.iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().getName().equals(name)) {
+                iterator.remove();
+                break;
+            }
+        }
+    }
+    public List<String> getNames() {
+        List<String> names = new ArrayList<>();
+        for (Player player : data) {
+            names.add(player.getName());
+        }
+        return names;
+    }
+
+    public void showWinners() {
+        data.sort((o1, o2) -> {
+            if (o1.getStatus().equals(Client.ClientState.WON.name())
+                    && !o2.getStatus().equals(Client.ClientState.WON.name())) {
+                return -1;
+            } else {
+                return Double.compare(Double.parseDouble(o2.getTime()),
+                        Double.parseDouble(o1.getTime()));
+            }
+        });
     }
 }

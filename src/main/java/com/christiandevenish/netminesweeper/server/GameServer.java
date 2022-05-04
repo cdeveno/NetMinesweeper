@@ -1,28 +1,45 @@
 package com.christiandevenish.netminesweeper.server;
 
+import com.christiandevenish.netminesweeper.Main;
 import com.christiandevenish.netminesweeper.game.Board;
 import com.christiandevenish.netminesweeper.game.GamePane;
+import com.christiandevenish.netminesweeper.game.PlayerTable;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class GameServer {
+public class GameServer extends Application {
+    Board board = new Board(GamePane.WIDTH, GamePane.HEIGHT);
 
-    private static ServerState serverState = ServerState.LOBBY;
-    private static final Board board = new Board(GamePane.WIDTH, GamePane.HEIGHT);
-    private static final int MAX_PLAYERS = 25;
-    private static final int SERVER_PORT = 59001;
-    private static final Map<String, Client.ClientState> clientNames = new HashMap<>();
-    private static final Map<String, Double> clientTimes = new HashMap<>();
-    private static final Set<ObjectOutputStream> outputStreams = new HashSet<>();
+    @FXML
+    Button startButton;
+    @FXML
+    Button stopButton;
+    @FXML
+    PlayerTable playerTable;
+    @FXML
+    Circle serverStatus;
+
+    private final ServerThread serverThread = new ServerThread(this);
+    public static final int MAX_PLAYERS = 25;
+    public static final int SERVER_PORT = 59001;
+    ServerState serverState = ServerState.LOBBY;
+    final Map<String, Client.ClientState> clientStates = new ConcurrentHashMap<>();
+    final Map<String, Double> clientTimes = new ConcurrentHashMap<>();
+    final Map<String, ObjectOutputStream> outputStreams = new ConcurrentHashMap<>();
+    String adminClient;
 
     public static final String NAME_REQUEST = "SUBMIT-NAME";
     public static final String NAME_ACCEPT = "NAME-ACCEPTED ";
@@ -30,124 +47,35 @@ public class GameServer {
     public static final String CLIENT_STATE_UPDATE = "STATE-UPDATE";
     public static final String DISCONNECT_REQUEST = "DISCONNECT-CLIENT";
     public static final String GAME_START = "GAME_START";
+    public static final String GAME_FINISH = "GAME_FINISH";
+    public static final String GAME_RESTART = "GAME_RESTART";
     public static final String CLIENT_TIME_UPDATE = "TIME_UPDATE";
 
-    public static void main(String[] args) throws IOException {
-        board.initBoard();
-
-        var pool = Executors.newFixedThreadPool(MAX_PLAYERS);
-
-        try (ServerSocket listener = new ServerSocket(SERVER_PORT)) {
-            while (true) {
-                pool.execute(new Handler(listener.accept()));
-            }
-        }
+    public static void main(String[] args) {
+        launch(args);
     }
 
-    private static class Handler implements Runnable {
-        private String name;
-        private final Socket socket;
-        private ObjectOutputStream outputStream;
-        private ObjectInputStream inputStream;
-
-        public Handler(Socket socket) {
-            this.socket = socket;
-        }
-
-        @Override
-        public void run() {
-
-            try {
-                outputStream = new ObjectOutputStream(socket.getOutputStream());
-                inputStream = new ObjectInputStream(socket.getInputStream());
-
-                while (true) {
-                    outputStream.writeUTF(NAME_REQUEST);
-                    outputStream.flush();
-
-                    name = inputStream.readUTF();
-                    synchronized (clientNames) {
-                        if (!clientNames.containsKey(name)) {
-                            clientNames.put(name, Client.ClientState.CONNECTING);
-                            broadcastStatusUpdate(name, Client.ClientState.CONNECTING);
-                            break;
-                        }
-                    }
-                }
-
-                outputStreams.add(outputStream);
-                synchronized (clientNames) {
-                    if (clientNames.size() == 1) outputStream.writeUTF(NAME_ACCEPT + ADMIN_ANNOTATION);
-                    else outputStream.writeUTF(NAME_ACCEPT);
-                }
-                outputStream.writeObject(board);
-                outputStream.flush();
-
-
-                synchronized (clientNames) {
-                    for (String name : clientNames.keySet()) {
-                        if (this.name.equals(name)) continue;
-                        outputStream.writeUTF(CLIENT_STATE_UPDATE + ":" + name + ":" + clientNames.get(name));
-                        outputStream.flush();
-                    }
-                }
-
-                synchronized (clientTimes) {
-                    for (String name : clientTimes.keySet()) {
-                        if (this.name.equals(name)) continue;
-                        outputStream.writeUTF(CLIENT_TIME_UPDATE + ":" + name);
-                        outputStream.writeDouble(clientTimes.get(name));
-                        outputStream.flush();
-                    }
-                }
-
-                while (!socket.isClosed()) {
-                    String input = inputStream.readUTF();
-                    if (input.startsWith(CLIENT_STATE_UPDATE)) {
-                        Client.ClientState state = Client.ClientState.valueOf(input.substring(input.indexOf(':') + 1));
-                        synchronized (clientNames) {
-                            clientNames.put(name, state);
-                        }
-                        broadcastStatusUpdate(name, state);
-                    } else if (input.startsWith(GAME_START)) {
-                        serverState = ServerState.IN_PROGRESS;
-                        broadcastMessage(GAME_START);
-                    } else if (input.startsWith(CLIENT_TIME_UPDATE)) {
-                        double time = inputStream.readDouble();
-                        clientTimes.put(name, time);
-                        broadcastTimeUpdate(name, time);
-                    }
-                }
-            } catch (IOException e) {
-                System.err.println(e.getMessage());
-            } finally {
-                if (outputStream != null) {
-                    outputStreams.remove(outputStream);
-                }
-                if (name != null) {
-                    clientNames.remove(name);
-                }
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    System.err.println(e.getMessage());
-                }
-            }
-        }
+    @Override
+    public void start(Stage stage) throws Exception {
+        FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource("server_menu.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 600, 400);
+        stage.setTitle("Game Server");
+        stage.setScene(scene);
+        stage.setResizable(false);
+        Platform.setImplicitExit(false);
+        stage.setOnCloseRequest(event -> {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setContentText("Click the stop button to stop the server!");
+            alert.setHeaderText("Stop Button");
+            alert.show();
+            event.consume();
+        });
+        stage.show();
     }
 
-    private static void broadcastStatusUpdate(String name, Client.ClientState state) throws IOException {
+    void broadcastTimeUpdate(String name, double time) throws IOException {
         synchronized (outputStreams) {
-            for (ObjectOutputStream o : outputStreams) {
-                o.writeUTF(CLIENT_STATE_UPDATE + ":" + name + ":" + state.name());
-                o.flush();
-            }
-        }
-    }
-
-    private static void broadcastTimeUpdate(String name, double time) throws IOException {
-        synchronized (outputStreams) {
-            for (ObjectOutputStream o : outputStreams) {
+            for (ObjectOutputStream o : outputStreams.values()) {
                 o.writeUTF(CLIENT_TIME_UPDATE + ":" + name);
                 o.writeDouble(time);
                 o.flush();
@@ -155,16 +83,62 @@ public class GameServer {
         }
     }
 
-    private static void broadcastMessage(String message) throws IOException {
+    void broadcastMessage(String message) throws IOException {
         synchronized (outputStreams) {
-            for (ObjectOutputStream o : outputStreams) {
+            for (ObjectOutputStream o : outputStreams.values()) {
                 o.writeUTF(message);
                 o.flush();
             }
         }
     }
 
-    enum ServerState {
+    void checkWin() throws IOException {
+        synchronized (clientStates) {
+            for (Client.ClientState state : clientStates.values()) {
+                if (!state.equals(Client.ClientState.WON)
+                        && !state.equals(Client.ClientState.LOST)) {
+                    return;
+                }
+            }
+            serverState = ServerState.FINISHED;
+            broadcastMessage(GAME_FINISH);
+        }
+    }
+
+    protected void restartGame() throws IOException {
+        playerTable.clearTimes();
+        serverState = ServerState.LOBBY;
+        board = new Board(GamePane.WIDTH, GamePane.HEIGHT);
+        board.initBoard();
+        synchronized (outputStreams) {
+            for (String name : outputStreams.keySet()) {
+                outputStreams.get(name).writeUTF(GAME_RESTART);
+                outputStreams.get(name).writeObject(board);
+                outputStreams.get(name).flush();
+            }
+        }
+    }
+
+    @FXML
+    public void startGame() {
+        serverThread.setDaemon(true);
+        serverThread.start();
+        startButton.setDisable(true);
+        serverStatus.setFill(Color.LIMEGREEN);
+    }
+
+    public void stopGame() throws IOException {
+        synchronized (outputStreams) {
+            for (String name : outputStreams.keySet()) {
+                outputStreams.get(name).writeUTF(DISCONNECT_REQUEST + ":" + name);
+                outputStreams.get(name).flush();
+            }
+        }
+        serverThread.pool.shutdownNow();
+        Platform.exit();
+    }
+
+    public enum ServerState {
         LOBBY,
         IN_PROGRESS,
         FINISHED

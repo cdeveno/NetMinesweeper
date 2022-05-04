@@ -8,7 +8,7 @@ import javafx.scene.input.MouseEvent;
 public class Mouse implements EventHandler<MouseEvent> {
 
     private final GamePane game;
-    private boolean firstClick = true;
+    protected boolean firstClick = true;
 
     public Mouse(GamePane game) {
         this.game = game;
@@ -27,6 +27,7 @@ public class Mouse implements EventHandler<MouseEvent> {
                 if (!tile.isFlagged) {
                     if (tile.isMine) {
                         game.lostGame();
+                        game.board.renderBoard(game.canvas);
                     } else {
                         if (tile.numberOfMinesInProximity == 0) {
                             game.board.autoRevealSquares(tile);

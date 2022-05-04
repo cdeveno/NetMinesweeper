@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.christiandevenish.netminesweeper.game.PlayerTable?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.layout.VBox?>
+
+<HBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.christiandevenish.netminesweeper.server.GameServer"
+      prefHeight="400.0" prefWidth="600.0" alignment="CENTER_LEFT" spacing="35.0">
+
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
+
+    <VBox spacing="35.0" alignment="CENTER">
+        <Button fx:id="startButton" text="Start" onAction="#startGame"/>
+        <Button fx:id="stopButton" text="Stop" onAction="#stopGame"/>
+    </VBox>
+
+    <PlayerTable fx:id="playerTable" prefWidth="350"/>
+
+    <Circle fx:id="serverStatus" radius="30" fill="red"/>
+
+</HBox>

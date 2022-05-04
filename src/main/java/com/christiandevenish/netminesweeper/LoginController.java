@@ -13,7 +13,7 @@ public class LoginController {
     private TextField nameField;
     @FXML
     private TextField ipField;
-    private final String ipMatch = "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$";
+    private final String ipMatch = "^(?:\\d{1,3}\\.){3}\\d{1,3}$";
     @FXML
     private TextField portField;
 
